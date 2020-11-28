@@ -1,5 +1,6 @@
 import requests
 from django.http import JsonResponse, HttpResponse
+from requests.auth import HTTPBasicAuth
 from rest_framework import viewsets, mixins, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -14,16 +15,14 @@ from movies.serializers import CollectionSerializer
 def movies(request):
     if request.method == 'POST':
         return HttpResponse(status=500)
-    user_pass = (utils.API_USERNAME, utils.API_PASSWORD)
+    user_pass = HTTPBasicAuth(utils.API_USERNAME, utils.API_PASSWORD)
     result = requests.get(utils.MOVIE_URL, auth=user_pass)
+    # return the result from the api for movies as a Json Response
     return JsonResponse(result.json())
 
 
-class CollectionView(viewsets.GenericViewSet,
-                     mixins.CreateModelMixin,
-                     mixins.UpdateModelMixin,
-                     mixins.DestroyModelMixin,
-                     mixins.RetrieveModelMixin, ):
+class CollectionView(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.UpdateModelMixin,
+                     mixins.DestroyModelMixin, mixins.RetrieveModelMixin, ):
     queryset = Collection.objects.all()
     permission_classes = IsAuthenticated,
     serializer_class = CollectionSerializer
@@ -40,16 +39,16 @@ class CollectionView(viewsets.GenericViewSet,
             },
             'is_success': True,
         }
+        # list function is overridden to create a custom response
         return Response(data=data, status=status.HTTP_200_OK, content_type='application/json')
 
     def perform_create(self, serializer):
-
         movies_dict = self.request.data['movies']
         collection = serializer.save(user=self.request.user)
         # serializer is saved by setting the current user as the user.
         # For each movie in the request,
         # if the movie's uuid does not exist in database, new movie is created
-        # and a relation object is created mapping the movie and the collection.
+        # a relation object is created mapping the movie and the collection.
         for item in movies_dict:
             if not Movie.objects.filter(uuid=item['uuid']).exists():
                 movie = Movie(uuid=item['uuid'], description=item['description'], title=item['title'],

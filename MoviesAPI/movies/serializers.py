@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from app.utils import get_favourite_genres
 from .models import Collection
 
 
